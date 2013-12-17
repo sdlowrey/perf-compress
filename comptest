@@ -1,0 +1,9 @@
+#!/usr/bin/env python
+import argparse
+import resource
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Measure compression performance')
+    parser.add_argument('file', metavar='FILE', type=file, help='path to input file')
+    parser.parse_args()
