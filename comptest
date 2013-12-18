@@ -1,9 +1,44 @@
 #!/usr/bin/env python
 import argparse
+import math
+import os
+import subprocess
+import sys
+import time
 import resource
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description='Measure compression performance')
-    parser.add_argument('file', metavar='FILE', type=file, help='path to input file')
-    parser.parse_args()
+        
+parser = argparse.ArgumentParser(description='Measure compression performance')
+parser.add_argument('file', metavar='FILE', help='path to input file')
+args = parser.parse_args()
+
+if not os.path.isfile(args.file):
+    raise DataFileError('{} is not a file'.format(args.file))
+in_path = os.path.abspath(args.file)
+in_filename = os.path.basename(args.file)
+in_size = round(os.stat(args.file).st_size / math.pow(2,30), 2) # gibibytes
+
+out_dir = '/var/tmp'
+prog = 'pigz'
+opt = '-c'
+level = 1
+
+for level in range(1,10):
+    out_path = '{}/{}-{}-{}'.format(out_dir, in_filename, prog, level)
+    out = open(out_path, 'wb')
+
+    start = time.time()
+    command = [prog, opt, '-{}'.format(level), in_path]
+    comp = subprocess.Popen(command, stdout=out)
+    #print "subproc {} compressing {} GiB at level {}...".format(comp.pid, in_size, level)
+    comp.wait()
+    end = time.time()
+    elapsed = end - start
+    if comp.returncode != 0:
+        print 'error: command returned {}'.format(comp.returncode)
+        sys.exit(2)
+    out.close()
+    out_size = round(os.stat(out_path).st_size / math.pow(2,30), 2)
+    #print 'done. compressed output is {} GiB'.format(out_size)
+    #print 'comp ratio: {}'.format(out_size / in_size)
+    print '{},{},{},{},{},{}'.format(prog, level, in_size, out_size, round(out_size / in_size, 2), round(elapsed,1))
